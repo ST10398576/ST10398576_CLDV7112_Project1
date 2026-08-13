@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.IO;
 using ST10398576_CLDV7112_Project1.Models;
 using ST10398576_CLDV7112_Project1.Services;
 
@@ -30,7 +31,7 @@ namespace ST10398576_CLDV7112_Project1.Controllers
 
             try
             {
-                var (stream, contentType, length) = await _blobService.DownloadBlobAsync(blobName);
+                (Stream stream, string contentType, long length) = await _blobService.DownloadBlobAsync(blobName);
                 // Return as file stream result
                 return File(stream, contentType, fileDownloadName: Path.GetFileName(blobName));
             }

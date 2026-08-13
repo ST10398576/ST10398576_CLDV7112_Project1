@@ -21,6 +21,30 @@ body {
   margin-bottom: 60px;
 }
 
+/* Custom navbar brand mark */
+.brand-mark {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* Make links slightly bolder and improve spacing */
+.navbar .nav-link {
+  color: #333;
+  padding: 0.5rem 0.75rem;
+}
+.navbar .nav-link:hover {
+  color: #0d6efd;
+}
+
+/* Main content and cards */
+.card { box-shadow: 0 6px 18px rgba(13,110,253,0.06); border: 0; }
+.hero {
+  background: linear-gradient(90deg,#f8fbff,#ffffff);
+  padding: 2.5rem;
+  border-radius: .5rem;
+  margin-bottom: 1.5rem;
+}
+
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
   color: var(--bs-secondary-color);
   text-align: end;

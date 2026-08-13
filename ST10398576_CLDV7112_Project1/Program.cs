@@ -15,12 +15,11 @@ builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
+// TEMPORARY DIAGNOSTIC: always show the detailed developer exception page,
+// even when deployed, so we can see the real stack trace. 
+// IMPORTANT: revert this before final submission — it exposes internal
+// details and should never be left on in production.
+app.UseDeveloperExceptionPage();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

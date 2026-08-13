@@ -7,49 +7,53 @@ namespace ST10398576_CLDV7112_Project1.Services
     {
         Task AddCustomerAsync(CustomerProfile customer);
         Task<List<CustomerProfile>> GetAllCustomersAsync();
+
+        Task AddProductAsync(Product product);
+        Task<List<Product>> GetAllProductsAsync();
     }
 
     public class TableStorageService : ITableStorageService
     {
-        private readonly TableClient? _customerTable;
-        private readonly bool _initialized;
+        private readonly TableClient _customerTable;
+        private readonly TableClient _productTable;
 
         public TableStorageService(IConfiguration config)
         {
-            try
-            {
-                string? connectionString = config.GetValue<string>("AzureStorage:ConnectionString");
-                if (string.IsNullOrWhiteSpace(connectionString))
-                {
-                    _initialized = false;
-                    return;
-                }
+            string connectionString = config.GetValue<string>("AzureStorage:ConnectionString")!;
 
-                var serviceClient = new TableServiceClient(connectionString);
+            var serviceClient = new TableServiceClient(connectionString);
 
-                _customerTable = serviceClient.GetTableClient("CustomerProfiles");
-                _customerTable.CreateIfNotExists();
+            _customerTable = serviceClient.GetTableClient("CustomerProfiles");
+            _customerTable.CreateIfNotExists();
 
-                _initialized = true;
-            }
-            catch
-            {
-                _initialized = false;
-            }
+            _productTable = serviceClient.GetTableClient("Products");
+            _productTable.CreateIfNotExists();
         }
 
         public async Task AddCustomerAsync(CustomerProfile customer)
         {
-            if (!_initialized || _customerTable == null) return;
             await _customerTable.AddEntityAsync(customer);
         }
 
         public async Task<List<CustomerProfile>> GetAllCustomersAsync()
         {
             var results = new List<CustomerProfile>();
-            if (!_initialized || _customerTable == null) return results;
-
             await foreach (var entity in _customerTable.QueryAsync<CustomerProfile>())
+            {
+                results.Add(entity);
+            }
+            return results;
+        }
+
+        public async Task AddProductAsync(Product product)
+        {
+            await _productTable.AddEntityAsync(product);
+        }
+
+        public async Task<List<Product>> GetAllProductsAsync()
+        {
+            var results = new List<Product>();
+            await foreach (var entity in _productTable.QueryAsync<Product>())
             {
                 results.Add(entity);
             }

@@ -1,0 +1,63 @@
+﻿@model List<ST10398576_CLDV7112_Project1.Models.Product>
+@{
+    ViewData["Title"] = "Products";
+}
+<div class="container py-4">
+    <h1 class="mb-4">Products (Azure Table Storage)</h1>
+
+    <div class="row">
+        <div class="col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header">Add Product</div>
+                <div class="card-body">
+                    <form asp-controller="Product" asp-action="Add" method="post" class="row g-2">
+                        <div class="col-12">
+                            <input class="form-control" type="text" name="ProductName" placeholder="Product Name" required />
+                        </div>
+                        <div class="col-12">
+                            <input class="form-control" type="text" name="Description" placeholder="Description" />
+                        </div>
+                        <div class="col-md-6">
+                            <input class="form-control" type="number" step="0.01" name="Price" placeholder="Price" />
+                        </div>
+                        <div class="col-md-6">
+                            <input class="form-control" type="number" name="StockQuantity" placeholder="Stock Qty" />
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-primary mt-2" type="submit">Add Product</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header">Products</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-light">
+                                <tr><th>Name</th><th>Description</th><th>Price</th><th>Stock</th></tr>
+                            </thead>
+                            <tbody>
+                                @if (Model != null)
+                                {
+                                    foreach (var p in Model)
+                                    {
+                                        <tr>
+                                            <td>@p.ProductName</td>
+                                            <td>@p.Description</td>
+                                            <td>@p.Price.ToString("C")</td>
+                                            <td>@p.StockQuantity</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

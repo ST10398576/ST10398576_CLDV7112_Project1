@@ -1,5 +1,7 @@
-﻿using Azure.Storage.Blobs;
+﻿using Azure.Storage;
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 
 namespace ST10398576_CLDV7112_Project1.Services
 {
@@ -7,67 +9,31 @@ namespace ST10398576_CLDV7112_Project1.Services
     {
         Task<string> UploadFileAsync(IFormFile file);
         Task<List<string>> ListBlobUrlsAsync();
+
+        Task<(Stream stream, string contentType, long length)> DownloadBlobAsync(string blobName);
     }
-
-        // Download a blob as a stream along with content type and length
-        public async Task<(Stream Content, string ContentType, long Length)> DownloadBlobAsync(string blobName)
-        {
-            if (!_initialized || _containerClient == null)
-            {
-                throw new InvalidOperationException("Blob storage is not configured or unavailable.");
-            }
-
-            var blobClient = _containerClient.GetBlobClient(blobName);
-            var response = await blobClient.DownloadAsync();
-            var headers = response.Value.Details.ContentType ?? "application/octet-stream";
-            var length = response.Value.ContentLength;
-            return (response.Value.Content, headers, length);
-        }
 
     public class BlobStorageService : IBlobStorageService
     {
-        private readonly BlobContainerClient? _containerClient;
-        private readonly bool _initialized;
-        private readonly string? _initError;
+        private readonly BlobContainerClient _containerClient;
+        private readonly string _accountName;
+        private readonly string _accountKey;
 
-        public BlobStorageService(IConfiguration config, ILogger<BlobStorageService> logger)
+        public BlobStorageService(IConfiguration config)
         {
-            try
-            {
-                string? connectionString = config.GetValue<string>("AzureStorage:ConnectionString");
-                if (string.IsNullOrWhiteSpace(connectionString))
-                {
-                    _initialized = false;
-                    _initError = "Connection string is missing or empty.";
-                    logger?.LogWarning("BlobStorageService not initialized: {Reason}", _initError);
-                    return;
-                }
+            string connectionString = config.GetValue<string>("AzureStorage:ConnectionString")!;
+            string containerName = "productimages";
 
-                string containerName = "productimages";
+            _containerClient = new BlobContainerClient(connectionString, containerName);
 
-                _containerClient = new BlobContainerClient(connectionString, containerName);
+            // No PublicAccessType specified -> container stays private.
+            _containerClient.CreateIfNotExists();
 
-                _containerClient.CreateIfNotExists(PublicAccessType.Blob);
-                _initialized = true;
-                logger?.LogInformation("BlobStorageService initialized for container '{Container}'", containerName);
-            }
-            catch (Exception ex)
-            {
-                _initialized = false;
-                _initError = ex.Message;
-                logger?.LogError(ex, "Failed to initialize BlobStorageService: {Message}", ex.Message);
-            }
+            (_accountName, _accountKey) = ParseAccountCredentials(connectionString);
         }
 
         public async Task<string> UploadFileAsync(IFormFile file)
         {
-            if (!_initialized || _containerClient == null)
-            {
-                var msg = "Blob storage is not configured or unavailable.";
-                if (!string.IsNullOrEmpty(_initError)) msg += " Initialization error: " + _initError;
-                throw new InvalidOperationException(msg);
-            }
-
             string blobName = $"{Guid.NewGuid()}_{file.FileName}";
             var blobClient = _containerClient.GetBlobClient(blobName);
 
@@ -79,23 +45,61 @@ namespace ST10398576_CLDV7112_Project1.Services
                 });
             }
 
-            return blobClient.Uri.ToString();
+            return GenerateReadOnlySasUrl(blobClient);
         }
 
         public async Task<List<string>> ListBlobUrlsAsync()
         {
             var urls = new List<string>();
-            if (!_initialized || _containerClient == null)
-            {
-                return urls;
-            }
-
             await foreach (var blobItem in _containerClient.GetBlobsAsync())
             {
                 var blobClient = _containerClient.GetBlobClient(blobItem.Name);
-                urls.Add(blobClient.Uri.ToString());
+                urls.Add(GenerateReadOnlySasUrl(blobClient));
             }
             return urls;
+        }
+
+        public async Task<(Stream stream, string contentType, long length)> DownloadBlobAsync(string blobName)
+        {
+            var blobClient = _containerClient.GetBlobClient(blobName);
+            var response = await blobClient.DownloadAsync();
+            var download = response.Value;
+
+            var ms = new MemoryStream();
+            await download.Content.CopyToAsync(ms);
+            ms.Position = 0;
+
+            var contentType = download.ContentType ?? "application/octet-stream";
+            var length = download.ContentLength;
+            return (ms, contentType, length);
+        }
+
+        private string GenerateReadOnlySasUrl(BlobClient blobClient)
+        {
+            var sasBuilder = new BlobSasBuilder
+            {
+                BlobContainerName = blobClient.BlobContainerName,
+                BlobName = blobClient.Name,
+                Resource = "b",
+                ExpiresOn = DateTimeOffset.UtcNow.AddDays(7)
+            };
+            sasBuilder.SetPermissions(BlobSasPermissions.Read);
+
+            var credential = new StorageSharedKeyCredential(_accountName, _accountKey);
+            var sasToken = sasBuilder.ToSasQueryParameters(credential).ToString();
+
+            return $"{blobClient.Uri}?{sasToken}";
+        }
+
+        private static (string accountName, string accountKey) ParseAccountCredentials(string connectionString)
+        {
+            var parts = connectionString
+                .Split(';')
+                .Where(s => !string.IsNullOrWhiteSpace(s) && s.Contains('='))
+                .Select(s => s.Split('=', 2))
+                .ToDictionary(kv => kv[0], kv => kv[1]);
+
+            return (parts["AccountName"], parts["AccountKey"]);
         }
     }
 }
