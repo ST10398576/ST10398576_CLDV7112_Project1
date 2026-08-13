@@ -1,0 +1,64 @@
+﻿@model List<ST10398576_CLDV7112_Project1.Models.CustomerProfile>
+@{
+    ViewData["Title"] = "Customer Profiles";
+}
+
+<div class="container py-4">
+    <h1 class="mb-4">Customer Profiles (Azure Table Storage)</h1>
+
+    <div id="customers" class="row">
+        <div class="col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header">Add Customer</div>
+                <div class="card-body">
+                    <form asp-controller="Customer" asp-action="Add" method="post" class="row g-2">
+                        <div class="col-12">
+                            <input class="form-control" type="text" name="FullName" placeholder="Full Name" required />
+                        </div>
+                        <div class="col-md-6">
+                            <input class="form-control" type="email" name="Email" placeholder="Email" required />
+                        </div>
+                        <div class="col-md-6">
+                            <input class="form-control" type="text" name="PhoneNumber" placeholder="Phone Number" />
+                        </div>
+                        <div class="col-12">
+                            <input class="form-control" type="text" name="ShippingAddress" placeholder="Shipping Address" />
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-primary mt-2" type="submit">Add Customer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header">Customers</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-light">
+                                <tr><th>Name</th><th>Email</th><th>Phone</th><th>Address</th></tr>
+                            </thead>
+                            <tbody>
+                                @if (Model != null)
+                                {
+                                    foreach (var c in Model)
+                                    {
+                                        <tr>
+                                            <td>@c.FullName</td>
+                                            <td>@c.Email</td>
+                                            <td>@c.PhoneNumber</td>
+                                            <td>@c.ShippingAddress</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,15 @@
+﻿@{
+    ViewData["Title"] = "Log File";
+    string fileName = ViewBag.FileName;
+    string content = ViewBag.Content;
+}
+
+<div class="py-4">
+    <div class="card">
+        <div class="card-header">Log File: @fileName</div>
+        <div class="card-body">
+            <pre class="bg-light p-3">@content</pre>
+            <a class="btn btn-secondary mt-3" asp-controller="Storage" asp-action="Index">Back to Dashboard</a>
+        </div>
+    </div>
+</div>

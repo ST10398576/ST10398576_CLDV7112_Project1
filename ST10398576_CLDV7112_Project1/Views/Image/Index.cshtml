@@ -1,0 +1,47 @@
+﻿@model List<string>
+@{
+    ViewData["Title"] = "Product Images";
+}
+
+<h1>Product Images (Azure Blob Storage)</h1>
+
+@if (TempData["Error"] != null)
+{
+    <div style="color:red">@TempData["Error"]</div>
+}
+
+<form asp-controller="Image" asp-action="Upload" method="post" enctype="multipart/form-data">
+    <input type="file" name="imageFile" accept="image/*" required />
+    <button type="submit">Upload Image</button>
+</form>
+
+@{
+    var urls = Model ?? new List<string>();
+}
+
+<div class="mt-3">
+    @if (!string.IsNullOrEmpty(TempData["Error"] as string))
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:15px;">
+        @foreach (var url in urls)
+        {
+            var uri = new Uri(url);
+            var blobName = uri.Segments.Last();
+            <div class="text-center">
+                <img src="@url" alt="Product image" style="width:120px;height:120px;object-fit:cover;" />
+                <div class="mt-2">
+                    <a class="btn btn-sm btn-outline-primary" asp-controller="Image" asp-action="Download" asp-route-blobName="@blobName">Download</a>
+                    <a class="btn btn-sm btn-link" target="_blank" href="@url">Open</a>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (!urls.Any())
+    {
+        <p class="text-muted">No images found.</p>
+    }
+</div>
