@@ -1,30 +1,53 @@
 # ST10398576_CLDV7112_Project1
 
-This application demonstrates use of Azure Storage services: Tables, Blobs, Queues, and Files.
+ASP.NET web application demo that uses Azure Storage services (Tables, Blobs, Queues, Files). The project includes a Razor Pages / MVC-style UI for managing customers, products, images, queue messages and viewing logs.
 
-Required configuration
+Key features
+- Customer management backed by Azure Table Storage
+- Product list and add (Table Storage)
+- Image upload, listing and download (Blob Storage)
+- Queue message send/list (Queue Storage)
+- Log file browsing and download (File Storage)
+- Responsive Bootstrap-based UI (consistent theme across views)
 
-- Set the Azure storage connection string in appsettings.json or (preferably) as an environment variable named `AzureStorage__ConnectionString` in Azure App Service configuration. Example:
+Prerequisites
+- .NET 10 SDK
+- Visual Studio 2026 (or VS Code + dotnet CLI)
+- An Azure Storage account (for full functionality)
+
+Configuration
+- Set the Azure storage connection string in appsettings.json OR as an environment variable named `AzureStorage__ConnectionString`.
+
+  Example connection string format:
 
   ```text
   DefaultEndpointsProtocol=https;AccountName=<account>;AccountKey=<key>;EndpointSuffix=core.windows.net
   ```
 
-Running locally
+Local development
+- Open the solution `ST10398576_CLDV7112_Project1.slnx` in Visual Studio and set the web project as the startup project.
+- Add the storage connection string to `appsettings.json` for local testing or use `dotnet user-secrets`.
+- Press F5 or run `dotnet run` from the project folder.
 
-- In Visual Studio, set the project as startup and press F5.
-- Ensure appsettings.json contains the storage connection string for local testing (or use `dotnet user-secrets`).
+UI and theme
+- The application uses Bootstrap 5 and a consistent card-based theme. The main layout is in `Views/Shared/_Layout.cshtml` and overrides in `wwwroot/css/site.css`.
+- The Customer Index view was used as the visual reference; other views were updated to match its container/card/table styles.
 
 Deployment to Azure
+- Create or use an existing Azure Storage account.
+- Create an App Service and deploy from Visual Studio (Publish) or use GitHub Actions / Azure Pipelines.
+- In App Service > Configuration, add `AzureStorage__ConnectionString` with your storage connection string. Do not commit secrets to source control.
 
-- Create an Azure Storage account (if you don't have one).
-- Create an App Service and configure `AzureStorage__ConnectionString` in Configuration -> Application settings.
-- Deploy the project via Publish from Visual Studio.
-- Use the /health endpoint to verify the app is running.
+Troubleshooting
+- If you see permission errors for blobs, ensure the connection string has the Storage account key (not SAS-only) so server-side SAS generation works.
+- If any UI pages look plain, confirm the `_Layout.cshtml` includes the Bootstrap CDN links and `wwwroot/css/site.css` is present.
 
-Notes
+Contributing
+- Feel free to open issues or pull requests on the repository. For UI changes, edit the views under `Views/` and styles in `wwwroot/css/site.css`.
 
-- Do not commit secrets to source control. Use user-secrets for local development and App Service settings or Key Vault for production.
-- The app provides UI to manage customers (Tables), upload images (Blobs), queue messages (Queues), and view logs (Files).
+License
+- This project does not include a license file by default. Add a LICENSE file if you intend to publish.
 
-If you want, I can add CI/CD or an ARM/Terraform script to provision the storage account and App Service.
+Need more?
+- I can add CI/CD, ARM/Terraform for infra provisioning, or refine the color palette and typography. Tell me which you'd like.
+
