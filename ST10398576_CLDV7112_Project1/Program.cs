@@ -10,15 +10,13 @@ builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();
 builder.Services.AddSingleton<IQueueStorageService, QueueStorageService>();
 builder.Services.AddSingleton<IFileStorageService, FileStorageService>();
 
+builder.Services.AddHttpClient<FunctionApiService>();
+
 // Health checks (simple)
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
-// TEMPORARY DIAGNOSTIC: always show the detailed developer exception page,
-// even when deployed, so we can see the real stack trace. 
-// IMPORTANT: revert this before final submission — it exposes internal
-// details and should never be left on in production.
 app.UseDeveloperExceptionPage();
 
 app.UseHttpsRedirection();

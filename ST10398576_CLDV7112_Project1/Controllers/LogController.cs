@@ -7,21 +7,51 @@ namespace ST10398576_CLDV7112_Project1.Controllers
     public class LogController : Controller
     {
         private readonly IFileStorageService _fileService;
+        private readonly FunctionApiService _functionApi;
 
-        public LogController(IFileStorageService fileService)
+        public LogController(IFileStorageService fileService, FunctionApiService functionApi)
         {
             _fileService = fileService;
+            _functionApi = functionApi;
         }
 
         // GET: /Log/Index
         public async Task<IActionResult> Index()
         {
-            var files = await _fileService.ListLogFileNamesAsync();
-            return View(files);
+            try
+            {
+                var files = await _fileService.ListLogFileNamesAsync();
+                return View(files);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Unable to load log files: " + ex.Message;
+                return View(new List<string>());
+            }
+        }
+
+        // POST: /Log/Create
+        [HttpPost]
+        public async Task<IActionResult> Create(string note)
+        {
+            if (string.IsNullOrWhiteSpace(note))
+            {
+                TempData["Error"] = "Please enter a note to log.";
+                return RedirectToAction("Index");
+            }
+
+            string fileName = $"ManualLog_{DateTime.UtcNow:yyyyMMdd_HHmmssfff}.txt";
+            bool success = await _functionApi.UploadLogFileAsync(fileName,
+                $"{DateTime.UtcNow:u} - {note}");
+
+            TempData["Message"] = success
+                ? $"Log file '{fileName}' written to Azure Files via Azure Function."
+                : "The function call failed. Please try again.";
+
+            return RedirectToAction("Index");
         }
 
         // GET: /Log/View?fileName=...
-        // Displays the log file content inline in the browser.
         public async Task<IActionResult> View(string fileName)
         {
             string content = await _fileService.ReadLogAsync(fileName);
@@ -31,8 +61,6 @@ namespace ST10398576_CLDV7112_Project1.Controllers
         }
 
         // GET: /Log/Download?fileName=...
-        // Forces the browser to download the log file as an attachment,
-        // satisfying the brief's "upload or download" control requirement.
         public async Task<IActionResult> Download(string fileName)
         {
             string content = await _fileService.ReadLogAsync(fileName);

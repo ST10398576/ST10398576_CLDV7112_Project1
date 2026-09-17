@@ -1,24 +1,33 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.IO;
-using ST10398576_CLDV7112_Project1.Models;
 using ST10398576_CLDV7112_Project1.Services;
+using System.IO;
 
 namespace ST10398576_CLDV7112_Project1.Controllers
 {
     public class ImageController : Controller
     {
         private readonly IBlobStorageService _blobService;
-        private readonly IQueueStorageService _queueService;
-        private readonly IFileStorageService _fileService;
+        private readonly FunctionApiService _functionApi;
 
-        public ImageController(
-            IBlobStorageService blobService,
-            IQueueStorageService queueService,
-            IFileStorageService fileService)
+        public ImageController(IBlobStorageService blobService, FunctionApiService functionApi)
         {
             _blobService = blobService;
-            _queueService = queueService;
-            _fileService = fileService;
+            _functionApi = functionApi;
+        }
+
+        // GET: /Image/Index
+        public async Task<IActionResult> Index()
+        {
+            try
+            {
+                var urls = await _blobService.ListBlobUrlsAsync();
+                return View(urls ?? new List<string>());
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Unable to load images: " + ex.Message;
+                return View(new List<string>());
+            }
         }
 
         // GET: /Image/Download?blobName=...
@@ -31,8 +40,9 @@ namespace ST10398576_CLDV7112_Project1.Controllers
 
             try
             {
-                (Stream stream, string contentType, long length) = await _blobService.DownloadBlobAsync(blobName);
-                // Return as file stream result
+                (Stream stream, string contentType, long length) =
+                    await _blobService.DownloadBlobAsync(blobName);
+
                 return File(stream, contentType, fileDownloadName: Path.GetFileName(blobName));
             }
             catch (InvalidOperationException ex)
@@ -47,58 +57,37 @@ namespace ST10398576_CLDV7112_Project1.Controllers
             }
         }
 
-        // GET: /Image/Index
-        public async Task<IActionResult> Index()
+        // POST: /Image/Upload
+        [HttpPost]
+        public async Task<IActionResult> Upload(IFormFile file)
         {
+            if (file is null || file.Length == 0)
+            {
+                TempData["Error"] = "Please select an image to upload.";
+                return RedirectToAction("Index");
+            }
+
             try
             {
-                var urls = await _blobService.ListBlobUrlsAsync();
-                return View(urls ?? new System.Collections.Generic.List<string>());
+                bool blobOk = await _functionApi.UploadBlobAsync(file);
+
+                bool queueOk = await _functionApi.SendQueueMessageAsync(
+                    $"IMAGE_UPLOADED|{file.FileName}|{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
+
+                string logName = $"ImageUploaded_{DateTime.UtcNow:yyyyMMdd_HHmmssfff}.txt";
+                bool fileOk = await _functionApi.UploadLogFileAsync(logName,
+                    $"Image '{file.FileName}' ({file.Length} bytes) uploaded at {DateTime.UtcNow:u}.");
+
+                TempData["Message"] = (blobOk && queueOk && fileOk)
+                    ? "Image uploaded, message queued and log file written via Azure Functions."
+                    : "One or more function calls failed. Check the application logs.";
             }
             catch (Exception ex)
             {
-                TempData["Error"] = "Unable to load images: " + ex.Message;
-                return View(new System.Collections.Generic.List<string>());
-            }
-        }
-
-        // POST: /Image/Upload
-        [HttpPost]
-        public async Task<IActionResult> Upload(IFormFile imageFile)
-        {
-            if (imageFile == null || imageFile.Length == 0)
-            {
-                TempData["Error"] = "Please select a file to upload.";
-                return RedirectToAction("Index");
-            }
-
-            try
-            {
-                string imageUrl = await _blobService.UploadFileAsync(imageFile);
-
-                await _queueService.SendMessageAsync(
-                    $"ImageUploaded: {imageFile.FileName} | Status: Processing order");
-
-                await _fileService.WriteLogAsync(new LogEntry
-                {
-                    Action = "ImageUploaded",
-                    Details = $"File '{imageFile.FileName}' uploaded to Blob Storage at {imageUrl}."
-                });
-
-                return RedirectToAction("Index");
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Known operational errors (e.g. storage not configured)
                 TempData["Error"] = "Upload failed: " + ex.Message;
-                return RedirectToAction("Index");
             }
-            catch (Exception)
-            {
-                // Generic catch - avoid leaking sensitive details
-                TempData["Error"] = "An unexpected error occurred while uploading the image.";
-                return RedirectToAction("Index");
-            }
+
+            return RedirectToAction("Index");
         }
     }
 }
