@@ -15,7 +15,6 @@ namespace ST10398576_ABCRetail.Functions
         public StoreTableEntityFunction(ILogger<StoreTableEntityFunction> logger)
         {
             _logger = logger;
-            // Read the storage connection string from application settings
             _connectionString = Environment.GetEnvironmentVariable("StorageConnectionString")!;
         }
 
@@ -28,13 +27,17 @@ namespace ST10398576_ABCRetail.Functions
 
             try
             {
-                // Only the tables used by the ABC Retail application are accepted
-                if (tableName != "CustomerProfiles" && tableName != "Products")
+                if (!string.Equals(tableName, "CustomerProfiles", StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(tableName, "Products", StringComparison.OrdinalIgnoreCase))
                 {
                     var bad = req.CreateResponse(HttpStatusCode.BadRequest);
                     await bad.WriteStringAsync("Table must be either 'CustomerProfiles' or 'Products'.");
                     return bad;
                 }
+
+                string actualTableName = string.Equals(tableName, "CustomerProfiles", StringComparison.OrdinalIgnoreCase)
+                    ? "customerProfiles"
+                    : "Products";
 
                 string body = await new StreamReader(req.Body).ReadToEndAsync();
                 var fields = JsonSerializer.Deserialize<Dictionary<string, string>>(body,
@@ -47,15 +50,13 @@ namespace ST10398576_ABCRetail.Functions
                     return bad;
                 }
 
-                var tableClient = new TableClient(_connectionString, tableName);
+                var tableClient = new TableClient(_connectionString, actualTableName);
                 await tableClient.CreateIfNotExistsAsync();
 
-                // PartitionKey groups related rows; RowKey uniquely identifies one row
                 var entity = new TableEntity(
                     fields.GetValueOrDefault("PartitionKey", tableName.ToUpperInvariant()),
                     fields["RowKey"]);
 
-                // Copy every remaining posted field onto the entity
                 foreach (var field in fields.Where(f => f.Key != "PartitionKey" && f.Key != "RowKey"))
                 {
                     entity[field.Key] = field.Value;
@@ -63,7 +64,6 @@ namespace ST10398576_ABCRetail.Functions
 
                 entity["CreatedOn"] = DateTime.UtcNow;
 
-                // Upsert prevents a duplicate-key failure if the record already exists
                 await tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
 
                 _logger.LogInformation("Entity {RowKey} written to {TableName}.", fields["RowKey"], tableName);
